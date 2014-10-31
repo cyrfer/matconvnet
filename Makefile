@@ -10,8 +10,6 @@
 
 # For Linux: intermediate files must be compiled with -fPIC to go in a MEX file
 
-SHELL=C:/Windows/System32/cmd.exe
-
 ENABLE_GPU ?=
 ENABLE_IMREADJPEG ?=
 DEBUG ?=
@@ -41,6 +39,11 @@ MEXOPTS = -largeArrayDims -lmwblas
 MEXOPTS_GPU = \
 -DENABLE_GPU -f matlab/src/config/mex_CUDA_$(ARCH).xml \
 -largeArrayDims -lmwblas
+ifeq ($(OS), Windows_NT)
+	SHELL=C:/Windows/System32/cmd.exe
+else
+	SHELL = /bin/bash # sh not good enough
+endif
 
 # at least compute 2.0 required
 NVCC = $(CUDAROOT)/bin/nvcc
