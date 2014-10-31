@@ -10,6 +10,8 @@
 
 # For Linux: intermediate files must be compiled with -fPIC to go in a MEX file
 
+SHELL=C:/Windows/System32/cmd.exe
+
 ENABLE_GPU ?=
 ENABLE_IMREADJPEG ?=
 DEBUG ?=
@@ -39,7 +41,6 @@ MEXOPTS = -largeArrayDims -lmwblas
 MEXOPTS_GPU = \
 -DENABLE_GPU -f matlab/src/config/mex_CUDA_$(ARCH).xml \
 -largeArrayDims -lmwblas
-SHELL = /bin/bash # sh not good enough
 
 # at least compute 2.0 required
 NVCC = $(CUDAROOT)/bin/nvcc
@@ -68,7 +69,8 @@ endif
 #                                                           Do the job
 # --------------------------------------------------------------------
 
-nvcc_filter=2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )
+nvcc_filter=
+# "2> >( sed 's/^\(.*\)(\([0-9][0-9]*\)): \([ew].*\)/\1:\2: \3/g' >&2 )"
 
 cpp_src:=matlab/src/bits/im2col.cpp
 cpp_src+=matlab/src/bits/pooling.cpp
@@ -98,20 +100,20 @@ mex_tgt:=$(patsubst %.c,%.mex$(MEXARCH),$(mex_tgt))
 mex_tgt:=$(patsubst %.cpp,%.mex$(MEXARCH),$(mex_tgt))
 mex_tgt:=$(patsubst %.cu,%.mex$(MEXARCH),$(mex_tgt))
 
-cpp_tgt:=$(patsubst %.cpp,%.o,$(cpp_src))
+cpp_tgt:=$(patsubst %.cpp,%.obj,$(cpp_src))
 cpp_tgt:=$(patsubst %.cu,%.o,$(cpp_tgt))
 
 .PHONY: all, distclean, clean, info, pack, post, post-doc, doc
 
-all: $(mex_tgt)
+all:	$(mex_tgt)
 
 matlab/mex/.stamp:
 	mkdir matlab/mex ; touch matlab/mex/.stamp
 
 # Standard code
-matlab/src/bits/%.o : matlab/src/bits/%.cpp
+matlab/src/bits/%.obj : matlab/src/bits/%.cpp
 	$(MEX) -c $(MEXOPTS) "$(<)"
-	mv -f "$(notdir $(@))" "$(@)"
+	mv "$(notdir $(@))" "$(@)"
 
 matlab/src/bits/%.o : matlab/src/bits/%.cu
 	$(NVCC) -c $(NVCCOPTS) "$(<)" -o "$(@)" $(nvcc_filter)
@@ -127,12 +129,10 @@ matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cpp matlab/mex/.stamp $(cpp_tgt)
 
 matlab/mex/%.mex$(MEXARCH) : matlab/src/%.cu matlab/mex/.stamp $(cpp_tgt)
 ifeq ($(ENABLE_GPU),)
-	echo "#include \"../src/$(notdir $(<))\"" > "matlab/mex/$(*).cpp"
+	echo #include "../src/$(notdir $(<))" > "matlab/mex/$(*).cpp"
 	$(MEX) $(MEXOPTS) \
 	  "matlab/mex/$(*).cpp" $(cpp_tgt) \
-	  -output "$(@)" \
-	  $(nvcc_filter)
-	rm -f "matlab/mex/$(*).cpp"
+	  -output "$(@)"
 else
 	echo $(@)
 	MW_NVCC_PATH='$(NVCC)' $(MEX) \
@@ -169,13 +169,13 @@ info:
 
 clean:
 	find . -name '*~' -delete
-	rm -f $(cpp_tgt)
-	rm -rf doc/.build
+	$(RMALL) $(cpp_tgt)
+	$(RMDIR) doc/.build
 
 distclean: clean
-	rm -rf matlab/mex/
-	rm -f doc/index.html doc/matconvnet-manual.pdf
-	rm -f $(NAME)-*.tar.gz
+	$(RMDIR) matlab/mex/
+	$(RMALL) doc/index.html doc/matconvnet-manual.pdf
+	$(RMALL) $(NAME)-*.tar.gz
 
 pack:
 	COPYFILE_DISABLE=1 \

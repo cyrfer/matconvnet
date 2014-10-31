@@ -16,7 +16,11 @@ the terms of the BSD license (see the COPYING file).
 #include <cmath>
 #include <blas.h>
 #include <string.h>
+#ifdef _MSC_VER
+#include <intrin.h>
+#else // _MSC_VER
 #include <x86intrin.h>
+#endif // _MSC_VER
 
 /* ---------------------------------------------------------------- */
 /*                                                  normalize (CPU) */
@@ -349,8 +353,8 @@ void normalizeBackward_cpu(T* normalized,
       plane t.
     */
     for (t = 1 ; t < (signed)depth ; ++t) {
-      T restrict * acc2_ = acc2 + t * offset ;
-      T const restrict * src_ = acc2_ - offset ;
+      T * restrict acc2_ = acc2 + t * offset ;
+      T const * restrict src_ = acc2_ - offset ;
       T const * end = acc2_ + offset ;
       for( ; acc2_ != end ; ++acc2_, ++src_) {
         *acc2_ += *src_ ;
